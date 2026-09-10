@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cierres PASM</title>
+<style>
+  :root{
+    --paper:#F6F1E7;
+    --card:#FFFFFF;
+    --ink:#2B2118;
+    --ink-soft:#6B5D4F;
+    --line:#E3D9C6;
+    --crust:#A6501F;
+    --crust-dark:#7E3A15;
+    --wheat:#C99A3E;
+    --good:#4A6B4A;
+    --bad:#AD3B3B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:48px;
+  }
+  header{
+    position:sticky; top:0; z-index:10;
+    background:var(--crust);
+    color:#fff;
+    padding:14px 16px 10px;
+  }
+  header h1{
+    margin:0;
+    font-size:1.15rem;
+    font-weight:700;
+    letter-spacing:0.2px;
+  }
+  header .sub{
+    font-size:0.78rem;
+    opacity:0.85;
+    margin-top:2px;
+  }
+  nav.tabs{
+    display:flex;
+    gap:4px;
+    padding:8px 12px 0;
+    background:var(--crust);
+  }
+  nav.tabs button{
+    flex:1;
+    border:none;
+    background:rgba(255,255,255,0.15);
+    color:#fff;
+    padding:10px 4px;
+    font-size:0.85rem;
+    font-weight:600;
+    border-radius:8px 8px 0 0;
+    cursor:pointer;
+  }
+  nav.tabs button.active{
+    background:var(--paper);
+    color:var(--crust-dark);
+  }
+  main{
+    max-width:520px;
+    margin:0 auto;
+    padding:16px 14px 40px;
+  }
+  section.view{display:none;}
+  section.view.active{display:block;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-size:0.95rem;
+    margin:0 0 10px;
+    color:var(--crust-dark);
+    font-weight:700;
+  }
+  label{
+    display:block;
+    font-size:0.8rem;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+    margin-top:10px;
+  }
+  label:first-child{margin-top:0;}
+  input[type=text],input[type=number],input[type=date],select{
+    width:100%;
+    padding:10px 10px;
+    font-size:1rem;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid var(--wheat); outline-offset:1px;}
+  .radiorow{
+    display:flex;
+    gap:8px;
+  }
+  .radiorow label.opt{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 6px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:0.9rem;
+    color:var(--ink);
+    margin:0;
+    cursor:pointer;
+  }
+  .radiorow input{display:none;}
+  .radiorow label.opt.checked{
+    background:var(--crust);
+    border-color:var(--crust);
+    color:#fff;
+    font-weight:600;
+  }
+  .denomrow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 0;
+    border-bottom:1px dashed var(--line);
+  }
+  .denomrow:last-child{border-bottom:none;}
+  .denomrow .lbl{font-size:0.92rem; color:var(--ink);}
+  .denomrow input{width:80px; text-align:right;}
+  .denomrow .sub{font-size:0.78rem; color:var(--ink-soft); min-width:78px; text-align:right;}
+  .gasto-row{
+    display:flex;
+    gap:8px;
+    margin-top:8px;
+  }
+  .gasto-row input:first-child{flex:1.4;}
+  .gasto-row input:last-child{flex:1;}
+  .linklike{
+    background:none; border:none;
+    color:var(--crust-dark);
+    font-size:0.85rem;
+    font-weight:600;
+    padding:8px 0 0;
+    cursor:pointer;
+  }
+  .totals{
+    margin-top:12px;
+    border-top:1px solid var(--line);
+    padding-top:10px;
+  }
+  .totals .row{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.9rem;
+    padding:3px 0;
+    color:var(--ink-soft);
+  }
+  .totals .row.final{
+    font-size:1.15rem;
+    font-weight:700;
+    color:var(--crust-dark);
+    padding-top:6px;
+  }
+  button.primary{
+    width:100%;
+    padding:13px;
+    background:var(--crust);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  button.primary:active{background:var(--crust-dark);}
+  button.secondary{
+    width:100%;
+    padding:12px;
+    background:#fff;
+    color:var(--crust-dark);
+    border:1px solid var(--crust);
+    border-radius:8px;
+    font-size:0.95rem;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:8px;
+  }
+  .status{
+    font-size:0.85rem;
+    padding:8px 10px;
+    border-radius:8px;
+    margin-top:10px;
+  }
+  .status.ok{background:#E9F1E9; color:var(--good);}
+  .status.warn{background:#F7ECEC; color:var(--bad);}
+  .status.pending{background:#FBF3E1; color:#8A6A1E;}
+  .channel-box{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px;
+    margin-top:8px;
+  }
+  .channel-box h3{
+    margin:0 0 6px;
+    font-size:0.85rem;
+    color:var(--crust-dark);
+  }
+  .channel-box .row{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.85rem;
+    padding:2px 0;
+  }
+  textarea{
+    width:100%;
+    min-height:140px;
+    font-family:ui-monospace,Menlo,monospace;
+    font-size:0.82rem;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#FCFAF5;
+    color:var(--ink);
+    resize:vertical;
+  }
+  table.hist{
+    width:100%;
+    border-collapse:collapse;
+    font-size:0.8rem;
+  }
+  table.hist th,table.hist td{
+    border-bottom:1px solid var(--line);
+    padding:6px 4px;
+    text-align:right;
+  }
+  table.hist th:first-child,table.hist td:first-child{text-align:left;}
+  .quickrange{
+    display:flex;
+    gap:6px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .quickrange button{
+    flex:1;
+    min-width:70px;
+    padding:8px 4px;
+    font-size:0.78rem;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:7px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .quickrange button.active{
+    background:var(--crust);
+    border-color:var(--crust);
+    color:#fff;
+    font-weight:600;
+  }
+  .loading{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:0.85rem;
+    padding:20px 0;
+  }
+  .note{
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    margin-top:8px;
+    line-height:1.4;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PASM · Cierres</h1>
+  <div class="sub">Productos Alimenticios Santa Marta</div>
+</header>
+<nav class="tabs">
+  <button data-view="vendedor" class="active">Vendedor</button>
+  <button data-view="consolidado">Consolidado</button>
+  <button data-view="historico">Histórico</button>
+</nav>
+
+<main>
+
+  <!-- ===================== VISTA VENDEDOR ===================== -->
+  <section class="view active" id="view-vendedor">
+    <div class="card">
+      <h2>Datos del cierre</h2>
+      <label>Canal</label>
+      <div class="radiorow" id="canalRadio">
+        <label class="opt checked"><input type="radio" name="canal" value="local" checked>Local</label>
+        <label class="opt"><input type="radio" name="canal" value="ruta">Ruta</label>
+      </div>
+      <label>Nombre de quien cierra</label>
+      <input type="text" id="v-nombre" placeholder="Ej. Cristian">
+      <label>Fecha</label>
+      <input type="date" id="v-fecha">
+    </div>
+
+    <div class="card">
+      <h2>Efectivo — denominaciones</h2>
+      <div id="denomList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Gastos que rebajan el efectivo</h2>
+      <div id="gastosList"></div>
+      <button class="linklike" id="addGasto">+ agregar otro gasto</button>
+    </div>
+
+    <div class="card">
+      <h2>Otros medios de pago</h2>
+      <label>Tarjeta</label>
+      <input type="number" inputmode="decimal" id="v-tarjeta" placeholder="0">
+      <label>Sinpe</label>
+      <input type="number" inputmode="decimal" id="v-sinpe" placeholder="0">
+      <label>Transferencia</label>
+      <input type="number" inputmode="decimal" id="v-transferencia" placeholder="0">
+
+      <div class="totals">
+        <div class="row"><span>Efectivo bruto</span><span id="t-bruto">₡0</span></div>
+        <div class="row"><span>Gastos</span><span id="t-gastos">₡0</span></div>
+        <div class="row"><span>Efectivo neto</span><span id="t-neto">₡0</span></div>
+        <div class="row final"><span>Total general</span><span id="t-general">₡0</span></div>
+      </div>
+    </div>
+
+    <button class="primary" id="btnGuardarCierre">Guardar cierre del día</button>
+    <div id="v-status"></div>
+  </section>
+
+  <!-- ===================== VISTA CONSOLIDADO ===================== -->
+  <section class="view" id="view-consolidado">
+    <div class="card">
+      <h2>Cierre consolidado</h2>
+      <label>Fecha a consolidar</label>
+      <input type="date" id="c-fecha">
+      <button class="secondary" id="btnCargarDia">Cargar cierres del día</button>
+      <div id="c-canales"></div>
+    </div>
+
+    <div class="card" id="c-retiros-card" style="display:none;">
+      <h2>Retiros de efectivo</h2>
+      <label>Retiro de Oscar (nota)</label>
+      <div class="gasto-row">
+        <input type="text" id="c-oscar-nota" placeholder="Concepto">
+        <input type="number" inputmode="decimal" id="c-oscar-monto" placeholder="0">
+      </div>
+      <label>Retiro de Daisy (nota)</label>
+      <div class="gasto-row">
+        <input type="text" id="c-daisy-nota" placeholder="Concepto">
+        <input type="number" inputmode="decimal" id="c-daisy-monto" placeholder="0">
+      </div>
+
+      <div class="totals">
+        <div class="row"><span>Total Local + Ruta</span><span id="c-suma">₡0</span></div>
+        <div class="row"><span>Retiros</span><span id="c-retiros">₡0</span></div>
+        <div class="row final"><span>Consolidado neto</span><span id="c-neto">₡0</span></div>
+      </div>
+
+      <button class="primary" id="btnGuardarConsolidado">Guardar consolidado</button>
+      <div id="c-status"></div>
+    </div>
+
+    <div class="card" id="c-reporte-card" style="display:none;">
+      <h2>Reporte para el grupo de WhatsApp</h2>
+      <textarea id="c-reporte-texto" readonly></textarea>
+      <button class="secondary" id="btnCopiarReporte">Copiar texto</button>
+    </div>
+  </section>
+
+  <!-- ===================== VISTA HISTORICO ===================== -->
+  <section class="view" id="view-historico">
+    <div class="card">
+      <h2>Histórico de cierres</h2>
+      <div class="quickrange" id="quickrange">
+        <button data-range="7" class="active">7 días</button>
+        <button data-range="30">30 días</button>
+        <button data-range="90">3 meses</button>
+      </div>
+      <div id="h-content" class="loading">Selecciona un rango para ver el historial.</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ================= ALMACENAMIENTO COMPARTIDO (JSONBlob) =================
+// Reemplaza el almacenamiento interno de Claude por uno real en internet,
+// para que Local, Ruta y Administrador vean los mismos datos desde
+// cualquier teléfono.
+const JSONBLOB_ID = '01a08d82-09a9-7cc6-a177-f28be987e98e';
+const JSONBLOB_URL = `https://jsonblob.com/api/jsonBlob/${JSONBLOB_ID}`;
+
+window.storage = {
+  async _load(){
+    const res = await fetch(JSONBLOB_URL, { headers: { 'Accept': 'application/json' } });
+    if(!res.ok) throw new Error('No se pudo conectar con el almacenamiento.');
+    return await res.json();
+  },
+  async _save(store){
+    const res = await fetch(JSONBLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(store)
+    });
+    return res.ok;
+  },
+  async get(key){
+    const store = await this._load();
+    if(!(key in store)) throw new Error('Clave no encontrada: ' + key);
+    return { key, value: store[key] };
+  },
+  async set(key, value){
+    const store = await this._load();
+    store[key] = value;
+    const ok = await this._save(store);
+    return ok ? { key, value } : null;
+  },
+  async list(prefix){
+    const store = await this._load();
+    const keys = Object.keys(store).filter(k => !prefix || k.startsWith(prefix));
+    return { keys };
+  },
+  async delete(key){
+    const store = await this._load();
+    const existed = key in store;
+    delete store[key];
+    const ok = await this._save(store);
+    return ok ? { key, deleted: existed } : null;
+  }
+};
+// ================= FIN ALMACENAMIENTO COMPARTIDO =================
+
+const DENOMS = [20000,10000,5000,2000,1000,500,100,50,25,10];
+const fmt = n => '₡' + (Math.round(n||0)).toLocaleString('es-CR');
+const todayStr = () => new Date().toISOString().slice(0,10);
+
+// ---------- TABS ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+// ================= VISTA VENDEDOR =================
+document.getElementById('v-fecha').value = todayStr();
+
+// denominaciones
+const denomList = document.getElementById('denomList');
+DENOMS.forEach(d=>{
+  const row = document.createElement('div');
+  row.className='denomrow';
+  row.innerHTML = `
+    <span class="lbl">₡${d.toLocaleString('es-CR')}</span>
+    <input type="number" inputmode="numeric" min="0" data-denom="${d}" placeholder="0">
+    <span class="sub" data-sub="${d}">₡0</span>
+  `;
+  denomList.appendChild(row);
+});
+denomList.addEventListener('input', calcVendedor);
+
+// canal radios
+document.querySelectorAll('#canalRadio input').forEach(r=>{
+  r.addEventListener('change',()=>{
+    document.querySelectorAll('#canalRadio .opt').forEach(o=>o.classList.remove('checked'));
+    r.closest('.opt').classList.add('checked');
+  });
+});
+
+// gastos dinámicos
+const gastosList = document.getElementById('gastosList');
+function addGastoRow(){
+  const row = document.createElement('div');
+  row.className='gasto-row';
+  row.innerHTML = `<input type="text" placeholder="Concepto (ej. combustible)" class="gasto-concepto">
+                    <input type="number" inputmode="decimal" placeholder="0" class="gasto-monto">`;
+  gastosList.appendChild(row);
+}
+addGastoRow(); addGastoRow();
+document.getElementById('addGasto').addEventListener('click', addGastoRow);
+gastosList.addEventListener('input', calcVendedor);
+['v-tarjeta','v-sinpe','v-transferencia'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calcVendedor);
+});
+
+function calcVendedor(){
+  let bruto = 0;
+  denomList.querySelectorAll('input[data-denom]').forEach(inp=>{
+    const denom = parseFloat(inp.dataset.denom);
+    const count = parseFloat(inp.value)||0;
+    const sub = denom*count;
+    bruto += sub;
+    denomList.querySelector(`[data-sub="${denom}"]`).textContent = fmt(sub);
+  });
+  let gastos = 0;
+  gastosList.querySelectorAll('.gasto-monto').forEach(inp=>{
+    gastos += parseFloat(inp.value)||0;
+  });
+  const neto = bruto - gastos;
+  const tarjeta = parseFloat(document.getElementById('v-tarjeta').value)||0;
+  const sinpe = parseFloat(document.getElementById('v-sinpe').value)||0;
+  const transf = parseFloat(document.getElementById('v-transferencia').value)||0;
+  const general = neto + tarjeta + sinpe + transf;
+
+  document.getElementById('t-bruto').textContent = fmt(bruto);
+  document.getElementById('t-gastos').textContent = fmt(gastos);
+  document.getElementById('t-neto').textContent = fmt(neto);
+  document.getElementById('t-general').textContent = fmt(general);
+
+  return {bruto,gastos,neto,tarjeta,sinpe,transf,general};
+}
+calcVendedor();
+
+document.getElementById('btnGuardarCierre').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('v-status');
+  const canal = document.querySelector('#canalRadio input:checked').value;
+  const nombre = document.getElementById('v-nombre').value.trim();
+  const fecha = document.getElementById('v-fecha').value;
+  if(!fecha){ statusEl.innerHTML = '<div class="status warn">Falta la fecha.</div>'; return; }
+  if(!nombre){ statusEl.innerHTML = '<div class="status warn">Falta el nombre de quien cierra.</div>'; return; }
+
+  const denominaciones = {};
+  denomList.querySelectorAll('input[data-denom]').forEach(inp=>{
+    denominaciones[inp.dataset.denom] = parseFloat(inp.value)||0;
+  });
+  const gastos = [];
+  gastosList.querySelectorAll('.gasto-row').forEach(row=>{
+    const concepto = row.querySelector('.gasto-concepto').value.trim();
+    const monto = parseFloat(row.querySelector('.gasto-monto').value)||0;
+    if(concepto || monto) gastos.push({concepto, monto});
+  });
+  const totals = calcVendedor();
+
+  const data = {
+    canal, nombre, fecha, denominaciones, gastos,
+    tarjeta: totals.tarjeta, sinpe: totals.sinpe, transferencia: totals.transf,
+    efectivoBruto: totals.bruto, totalGastos: totals.gastos,
+    efectivoNeto: totals.neto, totalGeneral: totals.general,
+    guardadoEn: new Date().toISOString()
+  };
+
+  try{
+    const res = await window.storage.set(`cierre:${canal}:${fecha}`, JSON.stringify(data), true);
+    if(res){
+      statusEl.innerHTML = `<div class="status ok">Cierre de ${canal === 'local' ? 'Local' : 'Ruta'} guardado para ${fecha}. Total: ${fmt(totals.general)}</div>`;
+    } else {
+      statusEl.innerHTML = '<div class="status warn">No se pudo guardar. Intenta de nuevo.</div>';
+    }
+  }catch(e){
+    statusEl.innerHTML = '<div class="status warn">Error al guardar: revisa tu conexión e intenta de nuevo.</div>';
+  }
+});
+
+// ================= VISTA CONSOLIDADO =================
+document.getElementById('c-fecha').value = todayStr();
+let cargados = {local:null, ruta:null};
+
+document.getElementById('btnCargarDia').addEventListener('click', async ()=>{
+  const fecha = document.getElementById('c-fecha').value;
+  const box = document.getElementById('c-canales');
+  box.innerHTML = '<div class="loading">Cargando cierres del día...</div>';
+  cargados = {local:null, ruta:null};
+
+  for(const canal of ['local','ruta']){
+    try{
+      const res = await window.storage.get(`cierre:${canal}:${fecha}`, true);
+      if(res && res.value) cargados[canal] = JSON.parse(res.value);
+    }catch(e){ /* no existe todavía */ }
+  }
+
+  let html = '';
+  for(const canal of ['local','ruta']){
+    const d = cargados[canal];
+    const label = canal === 'local' ? 'Local' : 'Ruta';
+    if(d){
+      html += `<div class="channel-box">
+        <h3>${label} — ${d.nombre}</h3>
+        <div class="row"><span>Efectivo neto</span><span>${fmt(d.efectivoNeto)}</span></div>
+        <div class="row"><span>Tarjeta</span><span>${fmt(d.tarjeta)}</span></div>
+        <div class="row"><span>Sinpe</span><span>${fmt(d.sinpe)}</span></div>
+        <div class="row"><span>Transferencia</span><span>${fmt(d.transferencia)}</span></div>
+        <div class="row" style="font-weight:700;"><span>Total ${label}</span><span>${fmt(d.totalGeneral)}</span></div>
+      </div>`;
+    } else {
+      html += `<div class="channel-box"><h3>${label}</h3><div class="status pending">Pendiente — aún no se ha capturado el cierre de ${label} para esta fecha.</div></div>`;
+    }
+  }
+  box.innerHTML = html;
+
+  document.getElementById('c-retiros-card').style.display = 'block';
+  calcConsolidado();
+});
+
+['c-oscar-monto','c-daisy-monto'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calcConsolidado);
+});
+
+function calcConsolidado(){
+  const suma = (cargados.local?.totalGeneral||0) + (cargados.ruta?.totalGeneral||0);
+  const oscar = parseFloat(document.getElementById('c-oscar-monto').value)||0;
+  const daisy = parseFloat(document.getElementById('c-daisy-monto').value)||0;
+  const retiros = oscar + daisy;
+  const neto = suma - retiros;
+  document.getElementById('c-suma').textContent = fmt(suma);
+  document.getElementById('c-retiros').textContent = fmt(retiros);
+  document.getElementById('c-neto').textContent = fmt(neto);
+  return {suma, retiros, neto, oscar, daisy};
+}
+
+document.getElementById('btnGuardarConsolidado').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('c-status');
+  const fecha = document.getElementById('c-fecha').value;
+  const totals = calcConsolidado();
+  const oscarNota = document.getElementById('c-oscar-nota').value.trim();
+  const daisyNota = document.getElementById('c-daisy-nota').value.trim();
+
+  const data = {
+    fecha,
+    local: cargados.local,
+    ruta: cargados.ruta,
+    retiros: {
+      oscar: {nota: oscarNota, monto: totals.oscar},
+      daisy: {nota: daisyNota, monto: totals.daisy}
+    },
+    totalLocalRuta: totals.suma,
+    totalRetiros: totals.retiros,
+    consolidadoNeto: totals.neto,
+    guardadoEn: new Date().toISOString()
+  };
+
+  try{
+    const res = await window.storage.set(`consolidado:${fecha}`, JSON.stringify(data), true);
+    if(res){
+      statusEl.innerHTML = `<div class="status ok">Consolidado del ${fecha} guardado. Total neto: ${fmt(totals.neto)}</div>`;
+      generarReporte(data);
+    } else {
+      statusEl.innerHTML = '<div class="status warn">No se pudo guardar el consolidado.</div>';
+    }
+  }catch(e){
+    statusEl.innerHTML = '<div class="status warn">Error al guardar: revisa tu conexión e intenta de nuevo.</div>';
+  }
+});
+
+function generarReporte(data){
+  const l = data.local, r = data.ruta;
+  let txt = `CIERRE PASM — ${data.fecha}\n\n`;
+  if(l){
+    txt += `LOCAL (${l.nombre})\n`;
+    txt += `Efectivo neto: ${fmt(l.efectivoNeto)}\nTarjeta: ${fmt(l.tarjeta)}  Sinpe: ${fmt(l.sinpe)}  Transf: ${fmt(l.transferencia)}\nTotal Local: ${fmt(l.totalGeneral)}\n\n`;
+  } else {
+    txt += `LOCAL: pendiente\n\n`;
+  }
+  if(r){
+    txt += `RUTA (${r.nombre})\n`;
+    txt += `Efectivo neto: ${fmt(r.efectivoNeto)}\nTarjeta: ${fmt(r.tarjeta)}  Sinpe: ${fmt(r.sinpe)}  Transf: ${fmt(r.transferencia)}\nTotal Ruta: ${fmt(r.totalGeneral)}\n\n`;
+  } else {
+    txt += `RUTA: pendiente\n\n`;
+  }
+  txt += `TOTAL LOCAL + RUTA: ${fmt(data.totalLocalRuta)}\n`;
+  if(data.retiros.oscar.monto) txt += `Retiro Oscar (${data.retiros.oscar.nota||'s/n'}): -${fmt(data.retiros.oscar.monto)}\n`;
+  if(data.retiros.daisy.monto) txt += `Retiro Daisy (${data.retiros.daisy.nota||'s/n'}): -${fmt(data.retiros.daisy.monto)}\n`;
+  txt += `\nCONSOLIDADO NETO: ${fmt(data.consolidadoNeto)}`;
+
+  document.getElementById('c-reporte-texto').value = txt;
+  document.getElementById('c-reporte-card').style.display = 'block';
+}
+
+document.getElementById('btnCopiarReporte').addEventListener('click', ()=>{
+  const ta = document.getElementById('c-reporte-texto');
+  ta.select();
+  ta.setSelectionRange(0, 999999);
+  try{
+    document.execCommand('copy');
+  }catch(e){}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(ta.value).catch(()=>{});
+  }
+});
+
+// ================= VISTA HISTORICO =================
+document.querySelectorAll('#quickrange button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#quickrange button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    cargarHistorico(parseInt(btn.dataset.range));
+  });
+});
+
+async function cargarHistorico(days){
+  const content = document.getElementById('h-content');
+  content.innerHTML = '<div class="loading">Cargando historial...</div>';
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  try{
+    const list = await window.storage.list('cierre:', true);
+    if(!list || !list.keys || list.keys.length === 0){
+      content.innerHTML = '<div class="loading">Todavía no hay cierres guardados.</div>';
+      return;
+    }
+    const rows = [];
+    for(const key of list.keys){
+      const parts = key.split(':'); // cierre:canal:fecha
+      const fecha = parts[2];
+      if(!fecha) continue;
+      const fechaDate = new Date(fecha);
+      if(fechaDate < cutoff) continue;
+      try{
+        const res = await window.storage.get(key, true);
+        if(res && res.value){
+          const d = JSON.parse(res.value);
+          rows.push(d);
+        }
+      }catch(e){}
+    }
+    if(rows.length === 0){
+      content.innerHTML = '<div class="loading">No hay cierres en este rango.</div>';
+      return;
+    }
+    rows.sort((a,b)=> a.fecha.localeCompare(b.fecha) || a.canal.localeCompare(b.canal));
+
+    let totalGeneral = 0;
+    let html = '<table class="hist"><thead><tr><th>Fecha</th><th>Canal</th><th>Efectivo</th><th>Otros</th><th>Total</th></tr></thead><tbody>';
+    rows.forEach(d=>{
+      const otros = (d.tarjeta||0)+(d.sinpe||0)+(d.transferencia||0);
+      totalGeneral += d.totalGeneral||0;
+      html += `<tr><td>${d.fecha}</td><td>${d.canal==='local'?'Local':'Ruta'}</td><td>${fmt(d.efectivoNeto)}</td><td>${fmt(otros)}</td><td>${fmt(d.totalGeneral)}</td></tr>`;
+    });
+    html += `</tbody></table><div class="totals" style="margin-top:10px;"><div class="row final"><span>Total del período</span><span>${fmt(totalGeneral)}</span></div></div>`;
+    content.innerHTML = html;
+  }catch(e){
+    content.innerHTML = '<div class="status warn">No se pudo cargar el historial.</div>';
+  }
+}
+cargarHistorico(7);
+</script>
+
+</body>
+</html>
