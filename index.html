@@ -398,53 +398,63 @@
 
 </main>
 
-<script>
-// ================= ALMACENAMIENTO COMPARTIDO (JSONBlob) =================
-// Reemplaza el almacenamiento interno de Claude por uno real en internet,
-// para que Local, Ruta y Administrador vean los mismos datos desde
-// cualquier teléfono.
-const JSONBLOB_ID = '01a08d82-09a9-7cc6-a177-f28be987e98e';
-const JSONBLOB_URL = `https://jsonblob.com/api/jsonBlob/${JSONBLOB_ID}`;
+<script type="module">
+// ================= ALMACENAMIENTO COMPARTIDO (Firebase Firestore) =================
+// Solución final: Firebase permite exponer esta configuración de forma segura
+// en el código (a diferencia de un token de GitHub), porque la seguridad se
+// controla con reglas del lado del servidor, no manteniendo esta información en secreto.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc, deleteDoc,
+  collection, query, where, getDocs, documentId
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCXSBUA9B6DEOl9YEbuuHIwg2IBVdslea4",
+  authDomain: "pam-cierres.firebaseapp.com",
+  projectId: "pam-cierres",
+  storageBucket: "pam-cierres.firebasestorage.app",
+  messagingSenderId: "989512443331",
+  appId: "1:989512443331:web:952be7e327c60534de0976"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const COLLECTION = 'storage';
 
 window.storage = {
-  async _load(){
-    const res = await fetch(JSONBLOB_URL, { headers: { 'Accept': 'application/json' } });
-    if(!res.ok) throw new Error('No se pudo conectar con el almacenamiento.');
-    return await res.json();
-  },
-  async _save(store){
-    const res = await fetch(JSONBLOB_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(store)
-    });
-    return res.ok;
-  },
   async get(key){
-    const store = await this._load();
-    if(!(key in store)) throw new Error('Clave no encontrada: ' + key);
-    return { key, value: store[key] };
+    const snap = await getDoc(doc(db, COLLECTION, key));
+    if(!snap.exists()) throw new Error('Clave no encontrada: ' + key);
+    return { key, value: snap.data().value };
   },
   async set(key, value){
-    const store = await this._load();
-    store[key] = value;
-    const ok = await this._save(store);
-    return ok ? { key, value } : null;
+    await setDoc(doc(db, COLLECTION, key), { value });
+    return { key, value };
   },
   async list(prefix){
-    const store = await this._load();
-    const keys = Object.keys(store).filter(k => !prefix || k.startsWith(prefix));
+    const col = collection(db, COLLECTION);
+    let q;
+    if(prefix){
+      q = query(col, where(documentId(), '>=', prefix), where(documentId(), '<', prefix + '\uf8ff'));
+    } else {
+      q = query(col);
+    }
+    const snaps = await getDocs(q);
+    const keys = [];
+    snaps.forEach(s => keys.push(s.id));
     return { keys };
   },
   async delete(key){
-    const store = await this._load();
-    const existed = key in store;
-    delete store[key];
-    const ok = await this._save(store);
-    return ok ? { key, deleted: existed } : null;
+    const snap = await getDoc(doc(db, COLLECTION, key));
+    const existed = snap.exists();
+    await deleteDoc(doc(db, COLLECTION, key));
+    return { key, deleted: existed };
   }
 };
-// ================= FIN ALMACENAMIENTO COMPARTIDO =================
+</script>
+
+<script>
 
 const DENOMS = [20000,10000,5000,2000,1000,500,100,50,25,10];
 const fmt = n => '₡' + (Math.round(n||0)).toLocaleString('es-CR');
