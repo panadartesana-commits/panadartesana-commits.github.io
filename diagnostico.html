@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico de conexión</title>
+<style>
+  body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f0e8; }
+  button { background: #a05a2c; color: white; border: none; padding: 16px 24px; font-size: 18px; border-radius: 10px; width: 100%; margin-bottom: 20px; }
+  pre { background: #1e1e1e; color: #0f0; padding: 15px; border-radius: 10px; white-space: pre-wrap; word-break: break-all; font-size: 14px; }
+  h2 { color: #a05a2c; }
+</style>
+</head>
+<body>
+<h2>Diagnóstico de PASM Cierres</h2>
+<button onclick="probarLectura()">1. Probar LECTURA</button>
+<button onclick="probarEscritura()">2. Probar GUARDADO</button>
+<pre id="resultado">Presiona un botón para probar...</pre>
+
+<script>
+const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/01a08d82-09a9-7cc6-a177-f28be987e98e';
+const out = document.getElementById('resultado');
+
+async function probarLectura(){
+  out.textContent = 'Probando lectura...';
+  try {
+    const res = await fetch(JSONBLOB_URL, { headers: { 'Accept': 'application/json' } });
+    const texto = await res.text();
+    out.textContent = 'ESTADO: ' + res.status + ' ' + res.statusText + '\n\nRESPUESTA:\n' + texto;
+  } catch(e) {
+    out.textContent = 'ERROR AL LEER:\n' + e.message + '\n\n' + e.stack;
+  }
+}
+
+async function probarEscritura(){
+  out.textContent = 'Probando guardado...';
+  try {
+    const res = await fetch(JSONBLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ prueba: 'hola', hora: new Date().toISOString() })
+    });
+    const texto = await res.text();
+    out.textContent = 'ESTADO: ' + res.status + ' ' + res.statusText + '\n\nRESPUESTA:\n' + texto;
+  } catch(e) {
+    out.textContent = 'ERROR AL GUARDAR:\n' + e.message + '\n\n' + e.stack;
+  }
+}
+</script>
+</body>
+</html>
