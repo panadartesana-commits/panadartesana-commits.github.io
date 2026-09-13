@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Horario Jaquelin · PASM</title>
+<style>
+  :root{
+    --paper:#F6F1E7;
+    --card:#FFFFFF;
+    --ink:#2B2118;
+    --ink-soft:#6B5D4F;
+    --line:#E3D9C6;
+    --crust:#A6501F;
+    --crust-dark:#7E3A15;
+    --good:#4A6B4A;
+    --bad:#AD3B3B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:48px;
+  }
+  header{
+    position:sticky; top:0; z-index:10;
+    background:var(--crust);
+    color:#fff;
+    padding:14px 16px 10px;
+  }
+  header h1{ margin:0; font-size:1.15rem; font-weight:700; }
+  header .sub{ font-size:0.78rem; opacity:0.85; margin-top:2px; }
+  main{ max-width:520px; margin:0 auto; padding:16px 14px 40px; }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .card h2{ font-size:0.95rem; margin:0 0 10px; color:var(--crust-dark); font-weight:700; }
+  label{ display:block; font-size:0.8rem; color:var(--ink-soft); margin-bottom:4px; margin-top:10px; }
+  label:first-child{margin-top:0;}
+  input[type=date],input[type=time],input[type=number]{
+    width:100%; padding:10px; font-size:1rem;
+    border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--crust); outline-offset:1px;}
+  .totals{ margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
+  .totals .row{ display:flex; justify-content:space-between; font-size:0.9rem; padding:3px 0; color:var(--ink-soft); }
+  .totals .row.final{ font-size:1.15rem; font-weight:700; color:var(--crust-dark); padding-top:6px; }
+  button.primary{
+    width:100%; padding:13px; background:var(--crust); color:#fff; border:none;
+    border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:6px;
+  }
+  button.primary:active{background:var(--crust-dark);}
+  .status{ font-size:0.85rem; padding:8px 10px; border-radius:8px; margin-top:10px; }
+  .status.ok{background:#E9F1E9; color:var(--good);}
+  .status.warn{background:#F7ECEC; color:var(--bad);}
+  table.hist{ width:100%; border-collapse:collapse; font-size:0.8rem; }
+  table.hist th,table.hist td{ border-bottom:1px solid var(--line); padding:6px 4px; text-align:right; }
+  table.hist th:first-child,table.hist td:first-child{text-align:left;}
+  .loading{ text-align:center; color:var(--ink-soft); font-size:0.85rem; padding:20px 0; }
+  .note{ font-size:0.75rem; color:var(--ink-soft); margin-top:8px; line-height:1.4; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Horario · Jaquelin</h1>
+  <div class="sub">Productos Alimenticios Santa Marta — Vendedora LOCAL</div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Registrar entrada y salida</h2>
+    <label>Fecha</label>
+    <input type="date" id="fecha">
+
+    <label>Hora de entrada</label>
+    <input type="time" id="entrada">
+
+    <label>Hora de salida</label>
+    <input type="time" id="salida">
+
+    <label>Horas de almuerzo (sin goce)</label>
+    <input type="number" id="almuerzo" value="1" step="0.25" min="0">
+
+    <div class="totals">
+      <div class="row"><span>Horas trabajadas</span><span id="horasCalc">—</span></div>
+    </div>
+
+    <button class="primary" id="btnGuardar">Guardar registro</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Últimos registros</h2>
+    <div id="historial" class="loading">Cargando...</div>
+    <div class="note">Esta lista es de referencia. El respaldo y cálculo oficial del salario se llevan en el archivo de Excel.</div>
+  </div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc,
+  collection, query, orderBy, limit, getDocs
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCXSBUA9B6DEOl9YEbuuHIwg2IBVdslea4",
+  authDomain: "pam-cierres.firebaseapp.com",
+  projectId: "pam-cierres",
+  storageBucket: "pam-cierres.firebasestorage.app",
+  messagingSenderId: "989512443331",
+  appId: "1:989512443331:web:952be7e327c60534de0976"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const COLLECTION = 'horario_jaquelin';
+
+const $ = id => document.getElementById(id);
+const todayStr = () => new Date().toISOString().slice(0,10);
+$('fecha').value = todayStr();
+
+function calcHoras(){
+  const e = $('entrada').value, s = $('salida').value;
+  const alm = parseFloat($('almuerzo').value) || 0;
+  if(!e || !s){ $('horasCalc').textContent = '—'; return null; }
+  const [eh,em] = e.split(':').map(Number);
+  const [sh,sm] = s.split(':').map(Number);
+  let horas = (sh + sm/60) - (eh + em/60) - alm;
+  if(horas < 0) horas += 24;
+  horas = Math.round(horas * 100) / 100;
+  $('horasCalc').textContent = horas + ' h';
+  return horas;
+}
+['entrada','salida','almuerzo'].forEach(id => $(id).addEventListener('input', calcHoras));
+
+function fmtFecha(iso){
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+async function cargarHistorial(){
+  const el = $('historial');
+  el.className = 'loading';
+  el.textContent = 'Cargando...';
+  try{
+    const q = query(collection(db, COLLECTION), orderBy('fecha', 'desc'), limit(14));
+    const snaps = await getDocs(q);
+    if(snaps.empty){
+      el.className = '';
+      el.textContent = 'Todavía no hay registros.';
+      return;
+    }
+    let rows = '';
+    snaps.forEach(s => {
+      const d = s.data();
+      rows += `<tr><td>${fmtFecha(d.fecha)}</td><td>${d.entrada||'-'}</td><td>${d.salida||'-'}</td><td>${d.horas!=null?d.horas.toFixed(2):'-'}</td></tr>`;
+    });
+    el.className = '';
+    el.innerHTML = `<table class="hist"><thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch(err){
+    el.className = '';
+    el.textContent = 'No se pudo cargar el historial: ' + err.message;
+  }
+}
+
+$('btnGuardar').addEventListener('click', async () => {
+  const fecha = $('fecha').value;
+  const entrada = $('entrada').value;
+  const salida = $('salida').value;
+  const almuerzo = parseFloat($('almuerzo').value) || 0;
+  const statusEl = $('status');
+
+  if(!fecha || !entrada || !salida){
+    statusEl.className = 'status warn';
+    statusEl.textContent = 'Completa fecha, hora de entrada y hora de salida.';
+    return;
+  }
+  const horas = calcHoras();
+  const btn = $('btnGuardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  try{
+    await setDoc(doc(db, COLLECTION, fecha), { fecha, entrada, salida, almuerzo, horas });
+    statusEl.className = 'status ok';
+    statusEl.textContent = `Registro guardado para ${fmtFecha(fecha)}. Horas trabajadas: ${horas} h.`;
+    cargarHistorial();
+  } catch(err){
+    statusEl.className = 'status warn';
+    statusEl.textContent = 'Error al guardar: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar registro';
+  }
+});
+
+cargarHistorial();
+</script>
+</body>
+</html>
