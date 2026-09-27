@@ -458,7 +458,9 @@ window.storage = {
 
 const DENOMS = [20000,10000,5000,2000,1000,500,100,50,25,10];
 const fmt = n => '₡' + (Math.round(n||0)).toLocaleString('es-CR');
-const todayStr = () => new Date().toISOString().slice(0,10);
+// Fecha de hoy (AAAA-MM-DD) según la hora de Costa Rica, sin importar la zona del celular
+const TZ = 'America/Costa_Rica';
+const todayStr = () => new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 
 // ---------- TABS ----------
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
@@ -718,8 +720,10 @@ async function cargarHistorico(days){
   const content = document.getElementById('h-content');
   content.innerHTML = '<div class="loading">Cargando historial...</div>';
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
+  // Fecha límite (AAAA-MM-DD) contando los días desde hoy en Costa Rica
+  const cutoffDate = new Date(todayStr() + 'T00:00:00Z');
+  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - days);
+  const cutoff = cutoffDate.toISOString().slice(0,10);
 
   try{
     const list = await window.storage.list('cierre:', true);
@@ -732,8 +736,7 @@ async function cargarHistorico(days){
       const parts = key.split(':'); // cierre:canal:fecha
       const fecha = parts[2];
       if(!fecha) continue;
-      const fechaDate = new Date(fecha);
-      if(fechaDate < cutoff) continue;
+      if(fecha <= cutoff) continue;
       try{
         const res = await window.storage.get(key, true);
         if(res && res.value){

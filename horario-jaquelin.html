@@ -125,7 +125,9 @@ const db = getFirestore(app);
 const COLLECTION = 'horario_jaquelin';
 
 const $ = id => document.getElementById(id);
-const todayStr = () => new Date().toISOString().slice(0,10);
+// Fecha de hoy (AAAA-MM-DD) según la hora de Costa Rica, sin importar la zona del celular
+const TZ = 'America/Costa_Rica';
+const todayStr = () => new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 $('fecha').value = todayStr();
 
 function calcHoras(){
